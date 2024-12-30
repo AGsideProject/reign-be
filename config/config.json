@@ -14,10 +14,16 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "database_production",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
+    "username": "reign_db_prod_user",
+    "password": "i7rJXhZv9LL2myauh7Dy7GIUd2voIg8E",
+    "database": "reign_db_prod",
+    "host": "dpg-ctp36hlds78s73cuva6g-a.singapore-postgres.render.com",
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   }
 }
