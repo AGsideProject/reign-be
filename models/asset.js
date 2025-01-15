@@ -14,6 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       order: DataTypes.INTEGER,
       model_id: DataTypes.INTEGER,
+      orientation: DataTypes.STRING,
     },
     {
       sequelize,

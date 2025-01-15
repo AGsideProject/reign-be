@@ -48,7 +48,10 @@ class ModelController {
         const sortedCarousel = assets
           .filter((asset) => asset.type === "carousel")
           .sort((a, b) => a.order - b.order)
-          .map((asset) => asset.img_url);
+          .map((asset) => ({
+            img_url: asset.img_url,
+            orientation: asset.orientation,
+          }));
 
         const sortedPolaroid = assets
           .filter((asset) => asset.type === "polaroid")

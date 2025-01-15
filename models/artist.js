@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       eyes: DataTypes.STRING,
       user_id: DataTypes.UUID,
       cover_img: DataTypes.STRING,
+      status: DataTypes.STRING,
     },
     {
       sequelize,

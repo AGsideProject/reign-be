@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       brand_name: DataTypes.STRING,
       contact_name: DataTypes.STRING,
       shoot_date: DataTypes.DATE,
-      booking_hour: DataTypes.INTEGER,
+      booking_hour: DataTypes.STRING,
       wa_number: DataTypes.STRING,
       email: DataTypes.STRING,
       desired_model: DataTypes.STRING,
@@ -26,5 +26,10 @@ module.exports = (sequelize, DataTypes) => {
       modelName: "Booking",
     }
   );
+
+  Booking.beforeCreate((book) => {
+    book.status = "ongoing";
+  });
+
   return Booking;
 };
