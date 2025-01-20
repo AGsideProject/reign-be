@@ -3,7 +3,6 @@ const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
 const { Artist, Asset } = require("../models");
 const axios = require("axios");
-const cheerio = require("cheerio");
 
 // Configure multer to handle file uploads
 const upload = multer({ storage: multer.memoryStorage() });
