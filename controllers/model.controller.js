@@ -2,6 +2,8 @@ const multer = require("multer");
 const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
 const { Artist, Asset } = require("../models");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
 // Configure multer to handle file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -184,6 +186,86 @@ class ModelController {
       next(error);
     }
   }
+
+  static async getAccessTokenPost(req, res, next) {
+    try {
+      const { code } = req.query;
+
+      const payload = {
+        client_id: "1321846202393193",
+        client_secret: "cbe9c71bc48b0e069a1209724ad90bce",
+        redirect_uri:
+          "https://reign-service.onrender.com/v1/model/post/get-code-post",
+        code: code,
+      };
+
+      console.log(payload, "<<<payload");
+
+      const { data } = await axios.post(
+        "https://graph.facebook.com/v21.0/oauth/access_token",
+        payload
+      );
+      const { access_token } = data;
+
+      if (access_token) {
+        const { data } = await axios.get(
+          `https://graph.facebook.com/v21.0/me/accounts?fields=id,name&access_token=${access_token}`
+        );
+        return res.status(200).json(data);
+      } else return res.status(200).json(access_token);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getUserPost(req, rest, next) {
+    const { username } = req.params;
+    try {
+      const data = await fetch(`https://www.instagram.com/${username}/`);
+      const source = await data.text();
+      console.log(source, "<<source");
+
+      const jsonObject = source
+        .match(
+          /<script type="text\/javascript">window\._sharedData = (.*)<\/script>/
+        )[1]
+        .slice(0, -1);
+
+      const userInfo = JSON.parse(jsonObject);
+
+      const feed =
+        userInfo.entry_data.ProfilePage[0].graphql.user
+          .edge_owner_to_timeline_media.edges;
+
+      const images = feed
+        .filter((e) => e.node.__typename === "GraphImage")
+        .map((e) => {
+          const {
+            display_url,
+            shortcode,
+            edge_media_preview_like,
+            edge_media_to_comment,
+            accessibility_caption,
+            thumbnail_resources,
+          } = e.node;
+
+          return {
+            src: display_url,
+            link: `https://www.instagram.com/p/${shortcode}/`,
+            likes: edge_media_preview_like.count,
+            comments: edge_media_to_comment.count,
+            caption: accessibility_caption,
+            thumbnails: thumbnail_resources,
+          };
+        });
+
+      return res.status(200).json({ images });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = { ModelController, upload };
+
+// https://www.facebook.com/v21.0/dialog/oauth?client_id=1321846202393193&redirect_uri=https://reign-service.onrender.com/v1/model/post/get-code-post&scope=instagram_basic,pages_show_list,instagram_manage_insights,pages_read_engagement&response_type=code
