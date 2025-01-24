@@ -10,7 +10,7 @@ class AssetController {
   // Static method to create a new asset
   static async createAsset(req, res, next) {
     try {
-      const { type, order, model_id } = req.body;
+      const { type, order, model_id, orientation, status } = req.body;
 
       // Check if a file is provided
       if (!req.file) {
@@ -35,6 +35,8 @@ class AssetController {
         type,
         order,
         model_id,
+        orientation,
+        status,
       });
 
       return res.status(201).json({

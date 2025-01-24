@@ -5,7 +5,10 @@ const { Artist, Asset } = require("../models");
 const axios = require("axios");
 
 // Configure multer to handle file uploads
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 class ModelController {
   // Static method to get all models
@@ -111,12 +114,32 @@ class ModelController {
 
       // Check if a file is provided
       if (req.file) {
+        // Validate file type and size
+        const allowedTypes = ["image/jpeg", "image/png"];
+        const maxSize = 10 * 1024 * 1024; // 10MB
+
+        if (!allowedTypes.includes(req.file.mimetype)) {
+          return res
+            .status(400)
+            .json({ message: "Only JPG and PNG files are allowed." });
+        }
+
+        if (req.file.size > maxSize) {
+          return res
+            .status(400)
+            .json({ message: "File size must be less than 10MB." });
+        }
+
         // Upload file to Cloudinary
         const result = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { resource_type: "image" },
             (error, result) => {
-              if (error) return reject(error);
+              if (error) {
+                console.error("Cloudinary upload error:", error);
+                return reject(error);
+              }
+              console.log("Cloudinary upload result:", result);
               resolve(result);
             }
           );
@@ -134,6 +157,7 @@ class ModelController {
         message: "Model created successfully",
       });
     } catch (error) {
+      console.error("Error in createArtist:", error);
       next(error);
     }
   }
