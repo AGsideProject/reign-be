@@ -18,6 +18,9 @@ module.exports = {
       hight: {
         type: Sequelize.INTEGER,
       },
+      gender: {
+        type: Sequelize.STRING,
+      },
       bust: {
         type: Sequelize.INTEGER,
       },

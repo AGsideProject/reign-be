@@ -22,14 +22,39 @@ class ModelController {
     }
   }
 
+  static async getAllPublicModels(req, res, next) {
+    try {
+      const { gender } = req.query;
+
+      const query = {
+        where: { status: "active" },
+      };
+
+      if (gender) query.where.gender = gender;
+
+      const artists = await Artist.findAll(query);
+      // Send response
+      return res.status(200).json({
+        message: "success",
+        data: artists,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Static method to get a model by slug
   static async getModelBySlug(req, res, next) {
     try {
       const { slug } = req.params;
 
+      // Find the artist by slug and include only active assets
       const artist = await Artist.findOne({
         where: { slug },
-        include: Asset,
+        include: {
+          model: Asset,
+          where: { status: "active" },
+        },
       });
 
       if (!artist) {
@@ -46,6 +71,7 @@ class ModelController {
       if (artistJson.Assets && artistJson.Assets.length) {
         const assets = artistJson.Assets;
 
+        // Filter and sort carousel assets
         const sortedCarousel = assets
           .filter((asset) => asset.type === "carousel")
           .sort((a, b) => a.order - b.order)
@@ -54,11 +80,13 @@ class ModelController {
             orientation: asset.orientation,
           }));
 
+        // Filter and sort polaroid assets
         const sortedPolaroid = assets
           .filter((asset) => asset.type === "polaroid")
           .sort((a, b) => a.order - b.order)
           .map((asset) => asset.img_url);
 
+        // Assign the sorted assets to the artist object
         artistJson.carousel = sortedCarousel;
         artistJson.polaroid = sortedPolaroid;
       }
@@ -181,6 +209,37 @@ class ModelController {
       await artist.destroy();
 
       return res.status(200).json({ message: "Artist deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateArtistStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      // Validate the status
+      if (status !== "active" && status !== "inactive") {
+        return res.status(400).json({
+          message:
+            "Invalid status. Status must be either 'active' or 'inactive'.",
+        });
+      }
+
+      // Find the artist by ID
+      const artist = await Artist.findByPk(id);
+
+      if (!artist) {
+        throw { name: "Not Found" };
+      }
+
+      // Update the artist's status
+      await artist.update({ status });
+
+      return res.status(200).json({
+        message: `Artist status updated to '${status}' successfully`,
+      });
     } catch (error) {
       next(error);
     }

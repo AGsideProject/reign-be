@@ -45,6 +45,140 @@ class AssetController {
     }
   }
 
+  // Static method to list assets by model_id with optional status filtering
+  static async listAssets(req, res, next) {
+    try {
+      const { model_id } = req.params;
+      const { status } = req.query;
+
+      // Validate model_id
+      if (!model_id) {
+        return res.status(400).json({ message: "model_id is required" });
+      }
+
+      // Define the base query
+      const query = {
+        where: { model_id },
+      };
+
+      // Add status filter if provided
+      if (status) {
+        if (status !== "active" && status !== "inactive") {
+          return res.status(400).json({
+            message: "Invalid status. Status must be 'active' or 'inactive'.",
+          });
+        }
+        query.where.status = status;
+      }
+
+      // Fetch assets based on the query
+      const assets = await Asset.findAll(query);
+
+      return res.status(200).json({
+        message: "success",
+        data: assets,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Static method to update the status of an asset
+  static async updateAssetStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      // Validate status
+      if (status !== "active" && status !== "inactive") {
+        return res.status(400).json({
+          message: "Invalid status. Status must be 'active' or 'inactive'.",
+        });
+      }
+
+      // Find the asset by ID
+      const asset = await Asset.findByPk(id);
+
+      if (!asset) {
+        return res.status(404).json({ message: "Asset not found" });
+      }
+
+      // Update the asset's status
+      await asset.update({ status });
+
+      return res.status(200).json({
+        message: "Asset status updated successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Static method to update the ordering of a single asset
+  static async updateAssetOrder(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { order } = req.body;
+
+      // Validate order
+      if (typeof order !== "number" || order < 0) {
+        return res.status(400).json({
+          message: "Invalid order. Order must be a non-negative number.",
+        });
+      }
+
+      // Find the asset by ID
+      const asset = await Asset.findByPk(id);
+
+      if (!asset) {
+        return res.status(404).json({ message: "Asset not found" });
+      }
+
+      // Update the asset's order
+      await asset.update({ order });
+
+      return res.status(200).json({
+        message: "Asset order updated successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Static method to bulk update the ordering of multiple assets
+  static async bulkUpdateAssetOrder(req, res, next) {
+    try {
+      const { assets } = req.body;
+
+      // Validate the input
+      if (!Array.isArray(assets) || assets.length === 0) {
+        return res.status(400).json({
+          message:
+            "Invalid input. Expected an array of assets with id and order.",
+        });
+      }
+
+      // Update each asset's order
+      for (const { id, order } of assets) {
+        const asset = await Asset.findByPk(id);
+
+        if (!asset) {
+          return res
+            .status(404)
+            .json({ message: `Asset with ID ${id} not found` });
+        }
+
+        await asset.update({ order });
+      }
+
+      return res.status(200).json({
+        message: "Bulk asset order update successful",
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Static method to delete an asset
   static async deleteAsset(req, res, next) {
     try {

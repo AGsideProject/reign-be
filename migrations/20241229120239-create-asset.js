@@ -24,6 +24,9 @@ module.exports = {
       model_id: {
         type: Sequelize.INTEGER,
       },
+      status: {
+        type: Sequelize.STRING,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
