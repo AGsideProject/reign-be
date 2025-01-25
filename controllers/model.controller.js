@@ -51,12 +51,11 @@ class ModelController {
     try {
       const { slug } = req.params;
 
-      // Find the artist by slug and include only active assets
+      // Find the artist by slug and include all assets (regardless of status)
       const artist = await Artist.findOne({
         where: { slug },
         include: {
-          model: Asset,
-          where: { status: "active" },
+          model: Asset, // Include all assets
         },
       });
 
@@ -72,10 +71,13 @@ class ModelController {
       artistJson.polaroid = [];
 
       if (artistJson.Assets && artistJson.Assets.length) {
-        const assets = artistJson.Assets;
+        // Filter assets by status "active"
+        const activeAssets = artistJson.Assets.filter(
+          (asset) => asset.status === "active"
+        );
 
         // Filter and sort carousel assets
-        const sortedCarousel = assets
+        const sortedCarousel = activeAssets
           .filter((asset) => asset.type === "carousel")
           .sort((a, b) => a.order - b.order)
           .map((asset) => ({
@@ -84,7 +86,7 @@ class ModelController {
           }));
 
         // Filter and sort polaroid assets
-        const sortedPolaroid = assets
+        const sortedPolaroid = activeAssets
           .filter((asset) => asset.type === "polaroid")
           .sort((a, b) => a.order - b.order)
           .map((asset) => ({
