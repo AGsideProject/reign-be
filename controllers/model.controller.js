@@ -87,7 +87,10 @@ class ModelController {
         const sortedPolaroid = assets
           .filter((asset) => asset.type === "polaroid")
           .sort((a, b) => a.order - b.order)
-          .map((asset) => asset.img_url);
+          .map((asset) => ({
+            img_url: asset.img_url,
+            orientation: asset.orientation,
+          }));
 
         // Assign the sorted assets to the artist object
         artistJson.carousel = sortedCarousel;
