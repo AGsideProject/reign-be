@@ -23,6 +23,25 @@ class AssetController {
         return res.status(400).json({ message: "Image file is required" });
       }
 
+      // Validate model_id
+      if (!model_id) {
+        return res.status(400).json({ message: "model_id is required" });
+      }
+
+      let nextOrder = order;
+
+      // If no order is provided, calculate the next order value
+      if (!nextOrder) {
+        const lastAsset = await Asset.findOne({
+          where: { model_id },
+          order: [["order", "DESC"]],
+        });
+
+        // If no assets exist for the model_id, start with order 1
+        // Otherwise, increment the highest order by 1
+        nextOrder = lastAsset ? lastAsset.order + 1 : 1;
+      }
+
       // Upload the file to Cloudinary
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -39,7 +58,7 @@ class AssetController {
       await Asset.create({
         img_url: result.secure_url,
         type,
-        order,
+        order: nextOrder, // Use the calculated or provided order
         model_id,
         orientation,
         status,
