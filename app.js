@@ -6,8 +6,15 @@ const router = require("./routers");
 const port = process.env.PORT || 10000;
 const cookieParser = require("cookie-parser");
 
+const allowedOrigins = process.env.CLIENT_URL.split(",");
 const corsOptions = {
-  origin: process.env.CLIENT_URL,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 };
