@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Booking.beforeCreate((book) => {
-    book.status = "ongoing";
+    book.status = "incoming";
   });
 
   return Booking;
