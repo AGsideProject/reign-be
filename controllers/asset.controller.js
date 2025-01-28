@@ -125,17 +125,11 @@ class AssetController {
         }, {});
 
         if (groupedAssets.carousel) {
-          result.carousel = groupedAssets.carousel.map((asset) => ({
-            img_url: asset.img_url,
-            orientation: asset.orientation,
-          }));
+          result.carousel = groupedAssets.carousel;
         }
 
         if (groupedAssets.polaroid) {
-          result.polaroid = groupedAssets.polaroid.map((asset) => ({
-            img_url: asset.img_url,
-            orientation: asset.orientation,
-          }));
+          result.polaroid = groupedAssets.polaroid;
         }
       }
 
