@@ -30,8 +30,13 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: false,
         validate: {
-          isDate: true,
-          isAfter: new Date().toISOString(),
+          isDate: {
+            msg: "check the date format please",
+          },
+          isAfter: {
+            args: new Date().toISOString(),
+            msg: "can not select past date",
+          },
         },
       },
       booking_hour: {
@@ -46,7 +51,10 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         validate: {
           notEmpty: true,
-          is: /^[0-9]{10,15}$/,
+          is: {
+            args: /^[0-9]{10,15}$/,
+            msg: "Check your phone number",
+          },
         },
       },
       email: {

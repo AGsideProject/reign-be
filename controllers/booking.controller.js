@@ -125,7 +125,7 @@ class BookingController {
       const booking = await Booking.findByPk(id);
       if (!booking) throw { name: "Not Found" };
 
-      await booking.update({ status });
+      await booking.update({ status, user_id: req.user?.id });
 
       return res.status(200).json({
         message: "Booking status updated successfully",

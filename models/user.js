@@ -34,9 +34,13 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
+        unique: {
+          msg: "email must be unique",
+        },
         validate: {
-          isEmail: true,
+          isEmail: {
+            msg: "please check your format email",
+          },
         },
       },
       password: {
