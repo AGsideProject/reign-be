@@ -201,6 +201,7 @@ class AssetController {
         where: {
           model_id: assetToUpdate.model_id,
           order: newOrder,
+          type: assetToUpdate.type,
         },
       });
 
