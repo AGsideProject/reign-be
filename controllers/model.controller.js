@@ -51,11 +51,10 @@ class ModelController {
     try {
       const { slug } = req.params;
 
-      // Find the artist by slug and include all assets (regardless of status)
       const artist = await Artist.findOne({
         where: { slug },
         include: {
-          model: Asset, // Include all assets
+          model: Asset,
         },
       });
 
@@ -63,49 +62,57 @@ class ModelController {
         throw { name: "Not Found" };
       }
 
-      // Convert the artist instance to a plain object
       const artistJson = artist.toJSON();
 
-      // Refactoring the artist object
-      artistJson.carousel = [];
-      artistJson.polaroid = [];
+      const result = {
+        ...artistJson,
+        carousel: [],
+        polaroid: [],
+      };
 
       if (artistJson.Assets && artistJson.Assets.length) {
-        // Filter assets by status "active"
         const activeAssets = artistJson.Assets.filter(
           (asset) => asset.status === "active"
         );
 
-        // Filter and sort carousel assets
-        const sortedCarousel = activeAssets
-          .filter((asset) => asset.type === "carousel")
-          .sort((a, b) => a.order - b.order)
-          .map((asset) => ({
+        const sortedAssets = activeAssets.sort((a, b) => {
+          if (a.order === b.order) {
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+          }
+
+          return a.order - b.order;
+        });
+
+        const groupedAssets = sortedAssets.reduce((acc, asset) => {
+          if (!acc[asset.type]) {
+            acc[asset.type] = [];
+          }
+          acc[asset.type].push(asset);
+          return acc;
+        }, {});
+
+        if (groupedAssets.carousel) {
+          result.carousel = groupedAssets.carousel.map((asset) => ({
             img_url: asset.img_url,
             orientation: asset.orientation,
           }));
+        }
 
-        // Filter and sort polaroid assets
-        const sortedPolaroid = activeAssets
-          .filter((asset) => asset.type === "polaroid")
-          .sort((a, b) => a.order - b.order)
-          .map((asset) => ({
+        if (groupedAssets.polaroid) {
+          result.polaroid = groupedAssets.polaroid.map((asset) => ({
             img_url: asset.img_url,
             orientation: asset.orientation,
           }));
-
-        // Assign the sorted assets to the artist object
-        artistJson.carousel = sortedCarousel;
-        artistJson.polaroid = sortedPolaroid;
+        }
       }
 
       // Remove the Assets array
-      delete artistJson.Assets;
+      delete result.Assets;
 
       // Send response with the plain object
       return res.status(200).json({
         message: "success",
-        data: artistJson,
+        data: result,
       });
     } catch (error) {
       next(error);
