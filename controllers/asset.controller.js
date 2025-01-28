@@ -182,7 +182,8 @@ class AssetController {
   static async updateAssetOrder(req, res, next) {
     try {
       const { id } = req.params;
-      const { order: newOrder } = req.body;
+      const { order } = req.body;
+      const newOrder = Number(order);
 
       if (typeof newOrder !== "number" || newOrder < 0) {
         return res.status(400).json({
@@ -203,8 +204,12 @@ class AssetController {
         },
       });
 
+      console.log(assetWithNewOrder, "<<assetWithNewOrder");
+
       if (assetWithNewOrder) {
         const currentOrder = assetToUpdate.order;
+        console.log(currentOrder, "<<<currentOrder");
+        console.log(newOrder, "<<<newOrder");
 
         await assetToUpdate.update({ order: newOrder });
         await assetWithNewOrder.update({ order: currentOrder });
