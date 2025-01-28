@@ -200,9 +200,31 @@ class UserController {
     try {
       const { userId } = req.params;
 
-      const user = await User.findByPk(userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
+      console.log(userId, "<<userId");
 
+      // Validate if userId is in UUIDv4 format
+      const uuidRegex =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+      if (!uuidRegex.test(userId)) {
+        return res.status(400).json({ message: "Invalid user ID format" });
+      }
+
+      // Find the user by primary key
+      const user = await User.findByPk(userId);
+
+      // Check if the user exists
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Prevent deletion of Master Admin users
+      if (user.role === "Master Admin") {
+        return res
+          .status(403)
+          .json({ message: "Cannot delete a Master Admin user" });
+      }
+
+      // Delete the user
       await user.destroy();
 
       return res.status(200).json({ message: "User deleted successfully" });

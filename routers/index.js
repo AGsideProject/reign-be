@@ -18,9 +18,9 @@ router.use("/v1/assets", routerAsset);
 router.use("/v1/booking", routerBooking);
 router.use(authentication);
 router.get("/v1/users", userController.getAllUsers);
-router.post("/v1/regiter", userController.signUp);
+router.post("/v1/register", userController.signUp);
 router.patch("/v1/update-user/:userId", userController.updateUser);
-router.post("/v1/delete-user/:userId", userController.deleteUser);
+router.delete("/v1/delete-user/:userId", userController.deleteUser);
 
 router.use(errorHandler);
 

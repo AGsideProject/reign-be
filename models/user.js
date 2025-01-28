@@ -35,10 +35,23 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
+        validate: {
+          isEmail: true,
+        },
       },
       password: {
         type: DataTypes.STRING,
         allowNull: false,
+        validate: {
+          len: [8, 100],
+          isStrongPassword(value) {
+            if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/.test(value)) {
+              throw new Error(
+                "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character."
+              );
+            }
+          },
+        },
       },
       role: {
         type: DataTypes.STRING,
@@ -53,7 +66,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "User",
-      timestamps: true, // Automatically manage createdAt and updatedAt
+      timestamps: true,
     }
   );
 

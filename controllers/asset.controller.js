@@ -148,22 +148,27 @@ class AssetController {
       const { id } = req.params;
       const { status } = req.body;
 
-      // Validate status
       if (status !== "active" && status !== "inactive") {
         return res.status(400).json({
           message: "Invalid status. Status must be 'active' or 'inactive'.",
         });
       }
 
-      // Find the asset by ID
       const asset = await Asset.findByPk(id);
 
       if (!asset) {
         return res.status(404).json({ message: "Asset not found" });
       }
 
-      // Update the asset's status
-      await asset.update({ status });
+      if (status === "inactive") {
+        const maxOrder = await Asset.max("order", {
+          where: { model_id: asset.model_id },
+        });
+
+        await asset.update({ status, order: maxOrder + 1 });
+      } else {
+        await asset.update({ status });
+      }
 
       return res.status(200).json({
         message: "Asset status updated successfully",
@@ -177,24 +182,35 @@ class AssetController {
   static async updateAssetOrder(req, res, next) {
     try {
       const { id } = req.params;
-      const { order } = req.body;
+      const { order: newOrder } = req.body;
 
-      // Validate order
-      if (typeof order !== "number" || order < 0) {
+      if (typeof newOrder !== "number" || newOrder < 0) {
         return res.status(400).json({
           message: "Invalid order. Order must be a non-negative number.",
         });
       }
 
-      // Find the asset by ID
-      const asset = await Asset.findByPk(id);
+      const assetToUpdate = await Asset.findByPk(id);
 
-      if (!asset) {
+      if (!assetToUpdate) {
         return res.status(404).json({ message: "Asset not found" });
       }
 
-      // Update the asset's order
-      await asset.update({ order });
+      const assetWithNewOrder = await Asset.findOne({
+        where: {
+          model_id: assetToUpdate.model_id,
+          order: newOrder,
+        },
+      });
+
+      if (assetWithNewOrder) {
+        const currentOrder = assetToUpdate.order;
+
+        await assetToUpdate.update({ order: newOrder });
+        await assetWithNewOrder.update({ order: currentOrder });
+      } else {
+        await assetToUpdate.update({ order: newOrder });
+      }
 
       return res.status(200).json({
         message: "Asset order updated successfully",
