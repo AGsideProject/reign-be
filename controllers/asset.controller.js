@@ -86,6 +86,7 @@ class AssetController {
       // Define the base query
       const query = {
         where: { model_id },
+        raw: true,
       };
 
       // Add status filter if provided
@@ -105,10 +106,9 @@ class AssetController {
         carousel: [],
         polaroid: [],
       };
-      const assetsJson = assets.toJSON();
 
-      if (assetsJson && assetsJson.length) {
-        const sortedAssets = assetsJson.sort((a, b) => {
+      if (assets && assets.length) {
+        const sortedAssets = assets.sort((a, b) => {
           if (a.order === b.order) {
             return new Date(b.updatedAt) - new Date(a.updatedAt);
           }
