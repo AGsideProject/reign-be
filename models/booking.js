@@ -10,26 +10,86 @@ module.exports = (sequelize, DataTypes) => {
   }
   Booking.init(
     {
-      brand_name: DataTypes.STRING,
-      contact_name: DataTypes.STRING,
-      shoot_date: DataTypes.DATE,
-      booking_hour: DataTypes.STRING,
-      wa_number: DataTypes.STRING,
-      email: DataTypes.STRING,
-      desired_model: DataTypes.STRING,
-      usages: DataTypes.STRING,
-      status: DataTypes.STRING,
-      user_id: DataTypes.UUID,
+      brand_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          len: [2, 100],
+        },
+      },
+      contact_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          len: [2, 50],
+        },
+      },
+      shoot_date: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        validate: {
+          isDate: true,
+          isAfter: new Date().toISOString(),
+        },
+      },
+      booking_hour: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
+      },
+      wa_number: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          is: /^[0-9]{10,15}$/,
+        },
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          isEmail: true,
+        },
+      },
+      desired_model: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          len: [2, 100],
+        },
+      },
+      usages: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+          len: [0, 255],
+        },
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: "incoming",
+        validate: {
+          isIn: [["incoming", "process", "reject", "done"]],
+        },
+      },
+      user_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
     },
     {
       sequelize,
       modelName: "Booking",
     }
   );
-
-  Booking.beforeCreate((book) => {
-    book.status = "incoming";
-  });
 
   return Booking;
 };

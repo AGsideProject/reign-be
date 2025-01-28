@@ -101,9 +101,47 @@ class AssetController {
       // Fetch assets based on the query
       const assets = await Asset.findAll(query);
 
+      const result = {
+        carousel: [],
+        polaroid: [],
+      };
+      const assetsJson = assets.toJSON();
+
+      if (assetsJson && assetsJson.length) {
+        const sortedAssets = assetsJson.sort((a, b) => {
+          if (a.order === b.order) {
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+          }
+
+          return a.order - b.order;
+        });
+
+        const groupedAssets = sortedAssets.reduce((acc, asset) => {
+          if (!acc[asset.type]) {
+            acc[asset.type] = [];
+          }
+          acc[asset.type].push(asset);
+          return acc;
+        }, {});
+
+        if (groupedAssets.carousel) {
+          result.carousel = groupedAssets.carousel.map((asset) => ({
+            img_url: asset.img_url,
+            orientation: asset.orientation,
+          }));
+        }
+
+        if (groupedAssets.polaroid) {
+          result.polaroid = groupedAssets.polaroid.map((asset) => ({
+            img_url: asset.img_url,
+            orientation: asset.orientation,
+          }));
+        }
+      }
+
       return res.status(200).json({
         message: "success",
-        data: assets,
+        data: result,
       });
     } catch (error) {
       next(error);
