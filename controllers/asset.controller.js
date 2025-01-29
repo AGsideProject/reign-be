@@ -33,7 +33,7 @@ class AssetController {
       // If no order is provided, calculate the next order value
       if (!nextOrder) {
         const lastAsset = await Asset.findOne({
-          where: { model_id },
+          where: { model_id, type },
           order: [["order", "DESC"]],
         });
 
