@@ -15,9 +15,9 @@
   },
   "production": {
     "username": "reign_db_prod_user",
-    "password": "i7rJXhZv9LL2myauh7Dy7GIUd2voIg8E",
-    "database": "reign_db_prod",
-    "host": "dpg-ctp36hlds78s73cuva6g-a.singapore-postgres.render.com",
+    "password": "52zLeLln1lMuSQobq4STa8RQ94WhNaVU",
+    "database": "reign_db_prod_4yxh",
+    "host": "dpg-cucvdthopnds73amnnv0-a.singapore-postgres.render.com",
     "dialect": "postgres",
     "dialectOptions": {
       "ssl": {

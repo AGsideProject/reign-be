@@ -285,29 +285,56 @@ class ModelController {
     try {
       const { code } = req.query;
 
+      // Step 1: Exchange the code for a Facebook access token
       const payload = {
-        client_id: "1321846202393193",
-        client_secret: "cbe9c71bc48b0e069a1209724ad90bce",
-        redirect_uri:
-          "https://reign-service.onrender.com/v1/model/post/get-code-post",
-        code: code,
+        client_id: "1514456765891447", // Your Facebook App ID
+        client_secret: "cda8929acec85dbfedc3e356f44c5316", // Your Facebook App Secret
+        redirect_uri: "http://localhost:8080/v1/model/post/get-code-post", // Your redirect URI
+        code: code, // The authorization code from Facebook
       };
-
-      console.log(payload, "<<<payload");
 
       const { data } = await axios.post(
         "https://graph.facebook.com/v21.0/oauth/access_token",
         payload
       );
+
       const { access_token } = data;
 
-      if (access_token) {
-        const { data } = await axios.get(
-          `https://graph.facebook.com/v21.0/me/accounts?fields=id,name&access_token=${access_token}`
-        );
-        return res.status(200).json(data);
-      } else return res.status(200).json(access_token);
+      if (!access_token) {
+        return res.status(400).json({ error: "Failed to get access token" });
+      }
+
+      console.log(access_token, "<<access_token");
+
+      // Step 2: Get the Facebook Page ID
+      const pageResponse = await axios.get(
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${access_token}`
+      );
+
+      console.log(pageResponse, "<<pageResponse");
+
+      const pageId = pageResponse.data.data[0].id;
+
+      // Step 3: Get the Instagram Business Account ID
+      const instagramAccountResponse = await axios.get(
+        `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${access_token}`
+      );
+
+      const instagramBusinessAccountId =
+        instagramAccountResponse.data.instagram_business_account.id;
+
+      // Step 4: Fetch Instagram posts
+      const postsResponse = await axios.get(
+        `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/media?fields=id,caption,media_type,media_url,permalink,timestamp&access_token=${access_token}`
+      );
+
+      // Return the posts
+      return res.status(200).json(postsResponse.data);
     } catch (error) {
+      console.error(
+        "Error in getAccessTokenPost:",
+        error.response?.data || error.message
+      );
       next(error);
     }
   }
@@ -363,3 +390,5 @@ class ModelController {
 module.exports = { ModelController, upload };
 
 // https://www.facebook.com/v21.0/dialog/oauth?client_id=1321846202393193&redirect_uri=https://reign-service.onrender.com/v1/model/post/get-code-post&scope=instagram_basic,pages_show_list,instagram_manage_insights,pages_read_engagement&response_type=code
+
+// https://www.facebook.com/v21.0/dialog/oauth?client_id=1514456765891447&redirect_uri=http://localhost:8080/v1/model/post/get-code-post&scope=instagram_basic,pages_show_list&response_type=code
