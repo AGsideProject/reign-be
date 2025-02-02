@@ -47,7 +47,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
         validate: {
-          len: [8, 100],
+          len: { args: [8, 100], msg: "Password min 8 char" },
           isStrongPassword(value) {
             if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/.test(value)) {
               throw new Error(

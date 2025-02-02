@@ -68,6 +68,7 @@ class ModelController {
         ...artistJson,
         carousel: [],
         polaroid: [],
+        instagram: [],
       };
 
       if (artistJson.Assets && artistJson.Assets.length) {
@@ -102,6 +103,16 @@ class ModelController {
           result.polaroid = groupedAssets.polaroid.map((asset) => ({
             img_url: asset.img_url,
             orientation: asset.orientation,
+          }));
+        }
+
+        if (groupedAssets.instagram) {
+          result.instagram = groupedAssets.instagram.map((asset) => ({
+            img_url: asset.img_url,
+            orientation: asset.orientation,
+            redirect: asset.redirect,
+            comments: asset.comments,
+            likes: asset.likes,
           }));
         }
       }
@@ -151,7 +162,7 @@ class ModelController {
                 console.error("Cloudinary upload error:", error);
                 return reject(error);
               }
-              console.log("Cloudinary upload result:", result);
+
               resolve(result);
             }
           );
@@ -281,114 +292,81 @@ class ModelController {
     }
   }
 
-  static async getAccessTokenPost(req, res, next) {
+  static async getInstagramPost(req, res, next) {
+    req.setTimeout(90000);
     try {
-      const { code } = req.query;
+      const { model_id, username } = req.body;
 
-      // Step 1: Exchange the code for a Facebook access token
-      const payload = {
-        client_id: "1514456765891447", // Your Facebook App ID
-        client_secret: "cda8929acec85dbfedc3e356f44c5316", // Your Facebook App Secret
-        redirect_uri: "http://localhost:8080/v1/model/post/get-code-post", // Your redirect URI
-        code: code, // The authorization code from Facebook
-      };
-
-      const { data } = await axios.post(
-        "https://graph.facebook.com/v21.0/oauth/access_token",
-        payload
-      );
-
-      const { access_token } = data;
-
-      if (!access_token) {
-        return res.status(400).json({ error: "Failed to get access token" });
+      if (!model_id || !username) {
+        return res.status(400).json({
+          message: "model_id and username are required",
+        });
       }
 
-      console.log(access_token, "<<access_token");
-
-      // Step 2: Get the Facebook Page ID
-      const pageResponse = await axios.get(
-        `https://graph.facebook.com/v21.0/me/accounts?access_token=${access_token}`
-      );
-
-      console.log(pageResponse, "<<pageResponse");
-
-      const pageId = pageResponse.data.data[0].id;
-
-      // Step 3: Get the Instagram Business Account ID
-      const instagramAccountResponse = await axios.get(
-        `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${access_token}`
-      );
-
-      const instagramBusinessAccountId =
-        instagramAccountResponse.data.instagram_business_account.id;
-
-      // Step 4: Fetch Instagram posts
-      const postsResponse = await axios.get(
-        `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/media?fields=id,caption,media_type,media_url,permalink,timestamp&access_token=${access_token}`
-      );
-
-      // Return the posts
-      return res.status(200).json(postsResponse.data);
-    } catch (error) {
-      console.error(
-        "Error in getAccessTokenPost:",
-        error.response?.data || error.message
-      );
-      next(error);
-    }
-  }
-
-  static async getUserPost(req, rest, next) {
-    const { username } = req.params;
-    try {
-      const data = await fetch(`https://www.instagram.com/${username}/`);
-      const source = await data.text();
-      console.log(source, "<<source");
-
-      const jsonObject = source
-        .match(
-          /<script type="text\/javascript">window\._sharedData = (.*)<\/script>/
-        )[1]
-        .slice(0, -1);
-
-      const userInfo = JSON.parse(jsonObject);
-
-      const feed =
-        userInfo.entry_data.ProfilePage[0].graphql.user
-          .edge_owner_to_timeline_media.edges;
-
-      const images = feed
-        .filter((e) => e.node.__typename === "GraphImage")
-        .map((e) => {
-          const {
-            display_url,
-            shortcode,
-            edge_media_preview_like,
-            edge_media_to_comment,
-            accessibility_caption,
-            thumbnail_resources,
-          } = e.node;
-
-          return {
-            src: display_url,
-            link: `https://www.instagram.com/p/${shortcode}/`,
-            likes: edge_media_preview_like.count,
-            comments: edge_media_to_comment.count,
-            caption: accessibility_caption,
-            thumbnails: thumbnail_resources,
-          };
+      const model = await Artist.findByPk(model_id);
+      if (!model) {
+        return res.status(404).json({
+          message: "Model not found",
         });
+      }
 
-      return res.status(200).json({ images });
+      const payload = {
+        addParentData: false,
+        directUrls: [`https://www.instagram.com/${username}`],
+        enhanceUserSearchWithFacebookPage: false,
+        isUserReelFeedURL: false,
+        isUserTaggedFeedURL: false,
+        resultsLimit: 10,
+        resultsType: "posts",
+        searchLimit: 1,
+        searchType: "hashtag",
+      };
+
+      const apifyUrl = `https://api.apify.com/v2/acts/${process.env.APIFY_ACTOR_ID}/run-sync-get-dataset-items?token=${process.env.APIFY_API_KEY}`;
+
+      const apifyResponse = await axios.post(apifyUrl, payload, {
+        params: {
+          timeout: 60000,
+          limit: 10,
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const instagramPosts = apifyResponse.data;
+
+      await Asset.destroy({
+        where: {
+          model_id: model_id,
+          type: "instagram",
+        },
+      });
+
+      const assetsToInsert = instagramPosts.map((post, index) => ({
+        img_url: post.displayUrl,
+        type: "instagram",
+        order: index + 1,
+        model_id: model_id,
+        orientation: "portrait",
+        status: "active",
+        likes: post.likesCount,
+        comments: post.commentsCount,
+        redirect: post.url,
+      }));
+
+      await Asset.bulkCreate(assetsToInsert);
+
+      return res.status(200).json({
+        message: "Instagram posts scraped and saved successfully",
+        inserted: assetsToInsert,
+      });
     } catch (error) {
-      next(error);
+      return res.status(400).json({
+        message: error.response ? error.response.data : error.message,
+      });
     }
   }
 }
 
 module.exports = { ModelController, upload };
-
-// https://www.facebook.com/v21.0/dialog/oauth?client_id=1321846202393193&redirect_uri=https://reign-service.onrender.com/v1/model/post/get-code-post&scope=instagram_basic,pages_show_list,instagram_manage_insights,pages_read_engagement&response_type=code
-
-// https://www.facebook.com/v21.0/dialog/oauth?client_id=1514456765891447&redirect_uri=http://localhost:8080/v1/model/post/get-code-post&scope=instagram_basic,pages_show_list&response_type=code

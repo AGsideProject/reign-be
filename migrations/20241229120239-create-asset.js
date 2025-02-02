@@ -10,7 +10,7 @@ module.exports = {
         type: Sequelize.INTEGER,
       },
       img_url: {
-        type: Sequelize.STRING,
+        type: Sequelize.TEXT,
       },
       type: {
         type: Sequelize.STRING,
@@ -25,6 +25,15 @@ module.exports = {
         type: Sequelize.INTEGER,
       },
       status: {
+        type: Sequelize.STRING,
+      },
+      likes: {
+        type: Sequelize.INTEGER,
+      },
+      comments: {
+        type: Sequelize.INTEGER,
+      },
+      redirect: {
         type: Sequelize.STRING,
       },
       createdAt: {

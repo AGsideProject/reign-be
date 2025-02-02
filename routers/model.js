@@ -6,11 +6,10 @@ const router = express.Router();
 
 router.get("/", ModelController.getAllPublicModels);
 router.get("/:slug", ModelController.getModelBySlug);
-router.get("/post/get-code-post", ModelController.getAccessTokenPost);
-router.get("/insta/:username", ModelController.getUserPost);
 router.use(authentication);
 router.post("/admin", upload.single("cover_img"), ModelController.createArtist);
 router.get("/admin/list", ModelController.getAllModels);
+router.post("/instgaram/synchronize", ModelController.getInstagramPost);
 router.put(
   "/admin/:id",
   upload.single("cover_img"),

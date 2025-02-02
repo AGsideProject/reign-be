@@ -94,11 +94,12 @@ class UserController {
 
       const user = await User.findOne({ where: { email }, raw: true });
 
-      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user)
+        return res.status(404).json({ message: "Email or password incorrect" });
 
       const isValid = compareThePass(password, user.password);
       if (!isValid)
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "Email or password incorrect" });
 
       const { access_token, refresh_token } =
         await UserController.generateTokens(user);

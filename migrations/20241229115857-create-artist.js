@@ -15,6 +15,9 @@ module.exports = {
       slug: {
         type: Sequelize.STRING,
       },
+      ig_username: {
+        type: Sequelize.STRING,
+      },
       hight: {
         type: Sequelize.INTEGER,
       },

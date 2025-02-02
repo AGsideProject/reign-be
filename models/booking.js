@@ -53,7 +53,7 @@ module.exports = (sequelize, DataTypes) => {
           notEmpty: true,
           is: {
             args: /^[0-9]{10,15}$/,
-            msg: "Check your phone number",
+            msg: "Check your phone number format",
           },
         },
       },

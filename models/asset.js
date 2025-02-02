@@ -10,12 +10,15 @@ module.exports = (sequelize, DataTypes) => {
   }
   Asset.init(
     {
-      img_url: DataTypes.STRING,
+      img_url: DataTypes.TEXT,
       type: DataTypes.STRING,
       order: DataTypes.INTEGER,
       model_id: DataTypes.INTEGER,
       orientation: DataTypes.STRING,
       status: DataTypes.STRING,
+      likes: DataTypes.INTEGER,
+      comments: DataTypes.INTEGER,
+      redirect: DataTypes.STRING,
     },
     {
       sequelize,

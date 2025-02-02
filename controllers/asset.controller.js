@@ -105,6 +105,7 @@ class AssetController {
       const result = {
         carousel: [],
         polaroid: [],
+        instagram: [],
       };
 
       if (assets && assets.length) {
@@ -130,6 +131,10 @@ class AssetController {
 
         if (groupedAssets.polaroid) {
           result.polaroid = groupedAssets.polaroid;
+        }
+
+        if (groupedAssets.instagram) {
+          result.instagram = groupedAssets.instagram;
         }
       }
 
@@ -273,8 +278,10 @@ class AssetController {
       }
 
       // Optionally delete the image from Cloudinary
-      const publicId = asset.img_url.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(publicId);
+      if (asset.img_url) {
+        const publicId = asset.img_url?.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(publicId);
+      }
 
       // Delete the asset from the database
       await asset.destroy();
