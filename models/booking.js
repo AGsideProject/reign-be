@@ -73,6 +73,10 @@ module.exports = (sequelize, DataTypes) => {
           len: [2, 100],
         },
       },
+      connected_model: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       usages: {
         type: DataTypes.STRING,
         allowNull: true,

@@ -43,6 +43,7 @@ class BookingController {
         wa_number,
         email,
         desired_model,
+        connected_model: "[]",
         usages,
         status,
         user_id,
@@ -63,35 +64,19 @@ class BookingController {
   static async updateBooking(req, res, next) {
     try {
       const { id } = req.params;
-      const {
-        brand_name,
-        contact_name,
-        shoot_date,
-        booking_hour,
-        wa_number,
-        email,
-        desired_model,
-        usages,
-        user_id,
-      } = req.body;
+
+      const { desired_model, connected_model } = req.body;
 
       const booking = await Booking.findByPk(id);
       if (!booking) throw { name: "Not Found" };
 
       await booking.update({
-        brand_name,
-        contact_name,
-        shoot_date,
-        booking_hour,
-        wa_number,
-        email,
         desired_model,
-        usages,
-        user_id,
+        connected_model,
       });
 
       return res.status(200).json({
-        message: "Booking updated successfully",
+        message: "Booking Connect successfully",
       });
     } catch (error) {
       next(error);

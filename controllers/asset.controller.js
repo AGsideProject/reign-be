@@ -291,6 +291,73 @@ class AssetController {
       next(error);
     }
   }
+
+  // Static method to update a single asset by ID
+  static async updateAssetById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { type, order, model_id, orientation, status } = req.body;
+
+      // Cari aset berdasarkan ID
+      const asset = await Asset.findByPk(id);
+      if (!asset) {
+        return res.status(404).json({ message: "Asset not found" });
+      }
+
+      // Periksa apakah ada file yang diunggah
+      let img_url = asset.img_url;
+      if (req.file) {
+        // Hapus gambar lama dari Cloudinary
+        const oldPublicId = asset.img_url?.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(oldPublicId);
+
+        // Upload gambar baru ke Cloudinary
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { resource_type: "image" },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          );
+          streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+        });
+
+        img_url = result.secure_url;
+      }
+
+      // Update data aset
+      await asset.update({
+        img_url,
+        type,
+        order,
+        model_id,
+        orientation,
+        status,
+      });
+
+      return res.status(200).json({
+        message: "Asset updated successfully",
+        data: asset,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getLandingPageCover(_req, res, next) {
+    try {
+      const cover = await Asset.findOne({
+        where: {
+          type: "landingpage",
+        },
+      });
+
+      return res.status(200).json({ message: "Success", data: cover });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = { AssetController, upload };

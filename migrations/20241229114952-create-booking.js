@@ -30,6 +30,9 @@ module.exports = {
       desired_model: {
         type: Sequelize.STRING,
       },
+      connected_model: {
+        type: Sequelize.STRING,
+      },
       usages: {
         type: Sequelize.STRING,
       },

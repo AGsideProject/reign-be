@@ -1,7 +1,7 @@
 const multer = require("multer");
 const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
-const { Artist, Asset } = require("../models");
+const { Artist, Asset, Booking, sequelize } = require("../models");
 const axios = require("axios");
 
 // Configure multer to handle file uploads
@@ -15,6 +15,21 @@ class ModelController {
   static async getAllModels(_req, res, next) {
     try {
       const artists = await Artist.findAll();
+      // Send response
+      return res.status(200).json({
+        message: "success",
+        data: artists,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getAllModelsPub(_req, res, next) {
+    try {
+      const artists = await Artist.findAll({
+        attributes: ["id", "name", "cover_img"],
+      });
       // Send response
       return res.status(200).json({
         message: "success",
@@ -365,6 +380,99 @@ class ModelController {
       return res.status(400).json({
         message: error.response ? error.response.data : error.message,
       });
+    }
+  }
+
+  static async getStattisticAllTime(req, res, next) {
+    try {
+      const statusCounts = await Booking.findAll({
+        attributes: [
+          "status",
+          [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+        ],
+        group: ["status"],
+      });
+
+      const allBooking = await Booking.findAll({
+        attributes: ["connected_model"],
+        raw: true,
+      });
+
+      const frequencyMap = {};
+      const findTop3FrequentNumbers = (arr) => {
+        arr.forEach((num) => {
+          frequencyMap[num] = (frequencyMap[num] || 0) + 1;
+        });
+
+        const sortedNumbers = Object.entries(frequencyMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map((entry) => Number(entry[0]));
+
+        return sortedNumbers;
+      };
+
+      let top3Ids = [];
+      if (allBooking && allBooking.length) {
+        let allIds = [];
+        allBooking.forEach((item) => {
+          let temp = JSON.parse(item.connected_model);
+          allIds = [...allIds, ...temp];
+        });
+
+        if (allIds.length > 3) top3Ids = findTop3FrequentNumbers(allIds);
+        else top3Ids = allIds;
+      }
+
+      const artists = await Artist.findAll({
+        where: { id: top3Ids },
+        attributes: ["id", "name"],
+        raw: true,
+      });
+
+      // Final top3
+      const finalTop3 = top3Ids.map((id) => {
+        const temp = artists.find((artist) => artist.id === id);
+        return { ...temp, totalBook: frequencyMap[id] };
+      });
+
+      const statistics = {
+        incoming: 0,
+        process: 0,
+        done: 0,
+        total: 0,
+      };
+
+      statusCounts.forEach((stat) => {
+        statistics[stat.status] = parseInt(stat.getDataValue("count"));
+      });
+      statistics.total = Object.values(statistics).reduce(
+        (acc, val) => acc + val,
+        0
+      );
+
+      const recentBookings = {};
+      const statuses = ["incoming", "process", "done"];
+
+      for (const status of statuses) {
+        recentBookings[status] = await Booking.findAll({
+          where: { status },
+          order: [["createdAt", "DESC"]],
+          attributes: ["id", "contact_name", "updatedAt"],
+          limit: 2,
+        });
+      }
+
+      return res.status(200).json({
+        message: "success",
+        data: {
+          statistics,
+          recentBookings,
+          topModel: finalTop3,
+        },
+      });
+    } catch (error) {
+      next(error);
     }
   }
 }
