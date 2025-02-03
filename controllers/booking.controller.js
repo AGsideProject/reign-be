@@ -8,6 +8,7 @@ class BookingController {
     try {
       const bookings = await Booking.findAll({
         include: [{ model: User, attributes: ["full_name"] }],
+        order: [["createdAt", "DESC"]],
       });
 
       return res.status(200).json({
