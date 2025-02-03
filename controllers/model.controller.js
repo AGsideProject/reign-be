@@ -420,8 +420,7 @@ class ModelController {
           allIds = [...allIds, ...temp];
         });
 
-        if (allIds.length > 3) top3Ids = findTop3FrequentNumbers(allIds);
-        else top3Ids = allIds;
+        top3Ids = findTop3FrequentNumbers(allIds);
       }
 
       const artists = await Artist.findAll({

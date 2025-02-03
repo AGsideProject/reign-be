@@ -6,5 +6,13 @@
     "password": "Bismillah",
     "role": "Master Admin",
     "phone_number": "082267580929"
+  },
+  {
+    "id": "3f5d8a1b-9c4a-42b1-92de-4e7f9bcd5a23",
+    "full_name": "Admin Admin",
+    "email": "admin@admin.com",
+    "password": "Admin#123",
+    "role": "Master Admin",
+    "phone_number": "081234567890"
   }
 ]
