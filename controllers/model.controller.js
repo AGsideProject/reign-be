@@ -457,7 +457,7 @@ class ModelController {
         recentBookings[status] = await Booking.findAll({
           where: { status },
           order: [["createdAt", "DESC"]],
-          attributes: ["id", "contact_name", "updatedAt"],
+          attributes: ["id", ["brand_name", "contact_name"], "updatedAt"],
           limit: 2,
         });
       }
