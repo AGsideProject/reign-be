@@ -9,10 +9,26 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+const getTimestamp = () => {
+  const now = new Date();
+  return now
+    .toISOString()
+    .replace(/[-T:.Z]/g, "")
+    .substring(0, 17);
+};
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = getTimestamp();
+    const ext = path.extname(file.originalname);
+    cb(null, `${timestamp}${ext}`);
+  },
 });
+
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 class AssetController {
   static async createAsset(req, res, next) {
@@ -48,9 +64,10 @@ class AssetController {
         `mini_${req.file.filename}`
       );
 
+      const quality = req.file?.size > 3047404 ? 8 : 10;
       // Kompresi gambar
       const compressedBuffer = await sharp(originalFilePath)
-        .jpeg({ quality: 70 })
+        .jpeg({ quality: quality })
         .toBuffer();
 
       fs.writeFileSync(compressedFilePath, compressedBuffer);
@@ -336,7 +353,7 @@ class AssetController {
 
         // Kompresi gambar baru
         const compressedBuffer = await sharp(newFilePath)
-          .jpeg({ quality: 70 })
+          .jpeg({ quality: 50 })
           .toBuffer();
 
         fs.writeFileSync(newCompressedFilePath, compressedBuffer);
