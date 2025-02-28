@@ -1,13 +1,20 @@
 const { Asset } = require("../models");
-const cloudinary = require("../config/cloudinary");
-const streamifier = require("streamifier");
 const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const sharp = require("sharp");
 
-// Configure multer for memory storage
-const upload = multer({ storage: multer.memoryStorage() });
+const uploadDir = path.join(__dirname, "../Assets");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 class AssetController {
-  // Static method to create a new asset
   static async createAsset(req, res, next) {
     try {
       const {
@@ -18,47 +25,40 @@ class AssetController {
         status,
       } = req.body;
 
-      // Check if a file is provided
       if (!req.file) {
         return res.status(400).json({ message: "Image file is required" });
       }
 
-      // Validate model_id
       if (!model_id) {
         return res.status(400).json({ message: "model_id is required" });
       }
 
       let nextOrder = order;
-
-      // If no order is provided, calculate the next order value
       if (!nextOrder) {
         const lastAsset = await Asset.findOne({
           where: { model_id, type },
           order: [["order", "DESC"]],
         });
-
-        // If no assets exist for the model_id, start with order 1
-        // Otherwise, increment the highest order by 1
         nextOrder = lastAsset ? lastAsset.order + 1 : 1;
       }
 
-      // Upload the file to Cloudinary
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { resource_type: "image" },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          }
-        );
-        streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-      });
+      const originalFilePath = path.join(uploadDir, req.file.filename);
+      const compressedFilePath = path.join(
+        uploadDir,
+        `mini_${req.file.filename}`
+      );
 
-      // Create the asset in the database
+      // Kompresi gambar
+      const compressedBuffer = await sharp(originalFilePath)
+        .jpeg({ quality: 70 })
+        .toBuffer();
+
+      fs.writeFileSync(compressedFilePath, compressedBuffer);
+
       await Asset.create({
-        img_url: result.secure_url,
+        img_url: `/Assets/${req.file.filename}`,
         type,
-        order: nextOrder, // Use the calculated or provided order
+        order: nextOrder,
         model_id,
         orientation,
         status,
@@ -66,13 +66,14 @@ class AssetController {
 
       return res.status(201).json({
         message: "Asset created successfully",
+        original_url: `/Assets/${req.file.filename}`,
+        compressed_url: `/Assets/mini_${req.file.filename}`,
       });
     } catch (error) {
       next(error);
     }
   }
 
-  // Static method to list assets by model_id with optional status filtering
   static async listAssets(req, res, next) {
     try {
       const { model_id } = req.params;
@@ -210,12 +211,8 @@ class AssetController {
         },
       });
 
-      console.log(assetWithNewOrder, "<<assetWithNewOrder");
-
       if (assetWithNewOrder) {
         const currentOrder = assetToUpdate.order;
-        console.log(currentOrder, "<<<currentOrder");
-        console.log(newOrder, "<<<newOrder");
 
         await assetToUpdate.update({ order: newOrder });
         await assetWithNewOrder.update({ order: currentOrder });
@@ -272,18 +269,25 @@ class AssetController {
 
       // Find the asset by ID
       const asset = await Asset.findByPk(id);
-
       if (!asset) {
         return res.status(404).json({ message: "Asset not found" });
       }
 
-      // Optionally delete the image from Cloudinary
-      if (asset.img_url) {
-        const publicId = asset.img_url?.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(publicId);
+      // Hapus file dari penyimpanan lokal
+      const filePath = path.join(uploadDir, path.basename(asset.img_url));
+      const compressedFilePath = path.join(
+        uploadDir,
+        `mini_${path.basename(asset.img_url)}`
+      );
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      if (fs.existsSync(compressedFilePath)) {
+        fs.unlinkSync(compressedFilePath);
       }
 
-      // Delete the asset from the database
+      // Hapus data dari database
       await asset.destroy();
 
       return res.status(200).json({ message: "Asset deleted successfully" });
@@ -304,26 +308,41 @@ class AssetController {
         return res.status(404).json({ message: "Asset not found" });
       }
 
-      // Periksa apakah ada file yang diunggah
       let img_url = asset.img_url;
+      let compressed_url = `/Assets/mini_${path.basename(asset.img_url)}`;
+
+      // Periksa apakah ada file baru yang diunggah
       if (req.file) {
-        // Hapus gambar lama dari Cloudinary
-        const oldPublicId = asset.img_url?.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(oldPublicId);
+        // Hapus file lama dari penyimpanan lokal
+        const oldFilePath = path.join(uploadDir, path.basename(asset.img_url));
+        const oldCompressedFilePath = path.join(
+          uploadDir,
+          `mini_${path.basename(asset.img_url)}`
+        );
 
-        // Upload gambar baru ke Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { resource_type: "image" },
-            (error, result) => {
-              if (error) return reject(error);
-              resolve(result);
-            }
-          );
-          streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-        });
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+        if (fs.existsSync(oldCompressedFilePath)) {
+          fs.unlinkSync(oldCompressedFilePath);
+        }
 
-        img_url = result.secure_url;
+        // Simpan file baru
+        const newFilePath = path.join(uploadDir, req.file.filename);
+        const newCompressedFilePath = path.join(
+          uploadDir,
+          `mini_${req.file.filename}`
+        );
+
+        // Kompresi gambar baru
+        const compressedBuffer = await sharp(newFilePath)
+          .jpeg({ quality: 70 })
+          .toBuffer();
+
+        fs.writeFileSync(newCompressedFilePath, compressedBuffer);
+
+        img_url = `/Assets/${req.file.filename}`;
+        compressed_url = `/Assets/mini_${req.file.filename}`;
       }
 
       // Update data aset
@@ -338,7 +357,16 @@ class AssetController {
 
       return res.status(200).json({
         message: "Asset updated successfully",
-        data: asset,
+        data: {
+          id: asset.id,
+          img_url,
+          compressed_url,
+          type,
+          order,
+          model_id,
+          orientation,
+          status,
+        },
       });
     } catch (error) {
       next(error);

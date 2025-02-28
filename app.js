@@ -1,5 +1,6 @@
 if (process.env.NODE_ENV !== "production") require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const app = express();
 const cors = require("cors");
 const router = require("./routers");
@@ -23,6 +24,8 @@ app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.use("/Assets", express.static(path.join(__dirname, "Assets")));
 
 app.get("/", (_, res) => {
   res.send({

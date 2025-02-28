@@ -3,12 +3,50 @@ const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
 const { Artist, Asset, Booking, sequelize } = require("../models");
 const axios = require("axios");
+const path = require("path");
+const fs = require("fs");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
 
 // Configure multer to handle file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
+
+const uploadDir = path.join(__dirname, "../Assets/instagram");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "../Assets");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, filename);
+  },
+});
+
+// Middleware untuk upload file
+const uploadv2 = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ["image/jpeg", "image/png"];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error("Only JPG and PNG files are allowed."), false);
+    }
+    cb(null, true);
+  },
+});
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 class ModelController {
   // Static method to get all models
@@ -150,45 +188,10 @@ class ModelController {
     try {
       const artistData = req.body;
 
-      // Check if a file is provided
       if (req.file) {
-        // Validate file type and size
-        const allowedTypes = ["image/jpeg", "image/png"];
-        const maxSize = 10 * 1024 * 1024; // 10MB
-
-        if (!allowedTypes.includes(req.file.mimetype)) {
-          return res
-            .status(400)
-            .json({ message: "Only JPG and PNG files are allowed." });
-        }
-
-        if (req.file.size > maxSize) {
-          return res
-            .status(400)
-            .json({ message: "File size must be less than 10MB." });
-        }
-
-        // Upload file to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { resource_type: "image" },
-            (error, result) => {
-              if (error) {
-                console.error("Cloudinary upload error:", error);
-                return reject(error);
-              }
-
-              resolve(result);
-            }
-          );
-          streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-        });
-
-        // Set the Cloudinary URL to `cover_img`
-        artistData.cover_img = result.secure_url;
+        artistData.cover_img = `/Assets/${req.file.filename}`;
       }
 
-      // Create the artist in the database
       await Artist.create(artistData);
 
       return res.status(201).json({
@@ -212,27 +215,20 @@ class ModelController {
         throw { name: "Not Found" };
       }
 
-      // Check if a file is provided
       if (req.file) {
-        // Upload file to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { resource_type: "image" },
-            (error, result) => {
-              if (error) return reject(error);
-              resolve(result);
-            }
-          );
-          streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-        });
+        // Hapus gambar lama jika ada
+        if (artist.cover_img) {
+          const oldPath = path.join(__dirname, "..", artist.cover_img);
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
+        }
 
-        // Update the Cloudinary URL in `cover_img`
-        artistData.cover_img = result.secure_url;
+        artistData.cover_img = `/Assets/${req.file.filename}`;
       } else {
         artistData.cover_img = artist.cover_img || null;
       }
 
-      // Update the artist in the database
       await artist.update(artistData);
 
       return res.status(200).json({
@@ -254,20 +250,23 @@ class ModelController {
         throw { name: "Not Found" };
       }
 
-      // Delete associated assets from Cloudinary and the database
+      // Hapus semua aset gambar terkait
       for (const asset of artist.Assets) {
-        const publicId = asset.img_url.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(publicId);
+        const assetPath = path.join(__dirname, "..", asset.img_url);
+        if (fs.existsSync(assetPath)) {
+          fs.unlinkSync(assetPath);
+        }
         await asset.destroy();
       }
 
-      // Optionally delete the artist's cover image from Cloudinary
+      // Hapus gambar cover artis jika ada
       if (artist.cover_img) {
-        const publicId = artist.cover_img.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(publicId);
+        const coverPath = path.join(__dirname, "..", artist.cover_img);
+        if (fs.existsSync(coverPath)) {
+          fs.unlinkSync(coverPath);
+        }
       }
 
-      // Delete the artist
       await artist.destroy();
 
       return res.status(200).json({ message: "Artist deleted successfully" });
@@ -313,16 +312,14 @@ class ModelController {
       const { model_id, username } = req.body;
 
       if (!model_id || !username) {
-        return res.status(400).json({
-          message: "model_id and username are required",
-        });
+        return res
+          .status(400)
+          .json({ message: "model_id and username are required" });
       }
 
       const model = await Artist.findByPk(model_id);
       if (!model) {
-        return res.status(404).json({
-          message: "Model not found",
-        });
+        return res.status(404).json({ message: "Model not found" });
       }
 
       const payload = {
@@ -340,41 +337,67 @@ class ModelController {
       const apifyUrl = `https://api.apify.com/v2/acts/${process.env.APIFY_ACTOR_ID}/run-sync-get-dataset-items?token=${process.env.APIFY_API_KEY}`;
 
       const apifyResponse = await axios.post(apifyUrl, payload, {
-        params: {
-          timeout: 60000,
-          limit: 10,
-        },
-        headers: {
-          "Content-Type": "application/json",
-        },
+        params: { timeout: 60000, limit: 10 },
+        headers: { "Content-Type": "application/json" },
       });
 
       const instagramPosts = apifyResponse.data;
 
+      // Hapus data lama dari database
       await Asset.destroy({
-        where: {
-          model_id: model_id,
-          type: "instagram",
-        },
+        where: { model_id, type: "instagram" },
       });
 
-      const assetsToInsert = instagramPosts.map((post, index) => ({
-        img_url: post.displayUrl,
-        type: "instagram",
-        order: index + 1,
-        model_id: model_id,
-        orientation: "portrait",
-        status: "active",
-        likes: post.likesCount,
-        comments: post.commentsCount,
-        redirect: post.url,
-      }));
+      const assetsToInsert = await Promise.all(
+        instagramPosts.map(async (post, index) => {
+          try {
+            // Generate nama file unik
+            const fileExtension = path.extname(
+              new URL(post.displayUrl).pathname
+            );
+            const fileName = `${uuidv4()}${fileExtension}`;
+            const filePath = path.join(uploadDir, fileName);
+            const compressedFilePath = path.join(uploadDir, `mini_${fileName}`);
 
-      await Asset.bulkCreate(assetsToInsert);
+            // Download gambar
+            const imageResponse = await axios.get(post.displayUrl, {
+              responseType: "arraybuffer",
+            });
+            fs.writeFileSync(filePath, imageResponse.data);
+
+            // Kompresi gambar
+            const compressedBuffer = await sharp(filePath)
+              .jpeg({ quality: 70 })
+              .toBuffer();
+            fs.writeFileSync(compressedFilePath, compressedBuffer);
+
+            return {
+              img_url: `/Assets/instagram/${fileName}`,
+              type: "instagram",
+              order: index + 1,
+              model_id,
+              orientation: "portrait",
+              status: "active",
+              likes: post.likesCount,
+              comments: post.commentsCount,
+              redirect: post.url,
+            };
+          } catch (err) {
+            console.error(
+              `Gagal mengunduh gambar: ${post.displayUrl}`,
+              err.message
+            );
+            return null;
+          }
+        })
+      );
+
+      const filteredAssets = assetsToInsert.filter(Boolean);
+      await Asset.bulkCreate(filteredAssets);
 
       return res.status(200).json({
-        message: "Instagram posts scraped and saved successfully",
-        inserted: assetsToInsert,
+        message: "Instagram posts scraped, downloaded, and saved successfully",
+        inserted: filteredAssets,
       });
     } catch (error) {
       return res.status(400).json({
@@ -476,4 +499,4 @@ class ModelController {
   }
 }
 
-module.exports = { ModelController, upload };
+module.exports = { ModelController, upload, uploadv2 };
