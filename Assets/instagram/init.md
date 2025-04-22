@@ -1,1 +1,0 @@
-penyimpanan gambar

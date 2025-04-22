@@ -17,11 +17,11 @@ module.exports = {
   },
   production: {
     username: process.env.DB_USERNAME || "reign_db_prod_user",
-    password: process.env.DB_PASSWORD || "52zLeLln1lMuSQobq4STa8RQ94WhNaVU",
-    database: process.env.DB_DATABASE || "reign_db_prod_4yxh",
+    password: process.env.DB_PASSWORD || "tduJnmW76X3o0ISboqP4cS0mH8W3rPPW",
+    database: process.env.DB_DATABASE || "reign_dev",
     host:
       process.env.DB_HOST ||
-      "dpg-cucvdthopnds73amnnv0-a.singapore-postgres.render.com",
+      "dpg-d03qers9c44c73aptpq0-a.singapore-postgres.render.com",
     dialect: process.env.DB_DIALECT || "postgres",
     dialectOptions: {
       ssl: {
