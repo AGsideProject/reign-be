@@ -14,10 +14,10 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "reign_db_prod_hpy9_user",
-    "password": "gppKgcyM5R4c2HcwHLVJKjnFB3Fnh9yl",
-    "database": "reign_db_prod_hpy9",
-    "host": "dpg-cv07vo5svqrc73aj7720-a.singapore-postgres.render.com",
+    "username": "reign_db_prod_user",
+    "password": "tduJnmW76X3o0ISboqP4cS0mH8W3rPPW",
+    "database": "reign_dev",
+    "host": "dpg-d03qers9c44c73aptpq0-a.singapore-postgres.render.com",
     "dialect": "postgres",
     "dialectOptions": {
       "ssl": {
